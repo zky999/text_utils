@@ -5,7 +5,7 @@ text utilities
 a convert for file size
 
 ## char2pwd
-a toy that change characters into any one charaters
+a toy that change all characters into any one charater
 
 ## json\_parser
 json parser
