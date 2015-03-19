@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+if [[ $# -ne 1 ]]; then
+    printf "Usage: %s <num_of_bytes>\n" $(basename $0) >&2
+    exit 1
+fi
+
+conv_size()
+{
+    nob=$1
+    factor=$2
+    
+    int_part=$(bc <<<"scale=0; print $nob/$factor")
+    if [[ $int_part -gt 0 ]]; then
+	bc <<<"scale=2; $nob/$factor"
+    fi
+}
+
+nob=$1
+
+scale=1024
+k_factor=$(bc <<<"scale=0; 1*$scale")
+m_factor=$(bc <<<"scale=0; $k_factor*$scale")
+g_factor=$(bc <<<"scale=0; $m_factor*$scale")
+t_factor=$(bc <<<"scale=0; $g_factor*$scale")
+p_factor=$(bc <<<"scale=0; $t_factor*$scale")
+e_factor=$(bc <<<"scale=0; $p_factor*$scale")
+z_factor=$(bc <<<"scale=0; $e_factor*$scale")
+y_factor=$(bc <<<"scale=0; $z_factor*$scale")
+
+k_unit=KB
+m_unit=MB
+g_unit=GB
+t_unit=TB
+p_unit=PB
+e_unit=EB
+z_unit=ZB
+y_unit=YB
+
+if [[ $(bc <<<"print $nob >= $y_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $y_factor) $y_unit
+elif [[ $(bc <<<"print $nob >= $z_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $z_factor) $z_unit
+elif [[ $(bc <<<"print $nob >= $e_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $e_factor) $e_unit
+elif [[ $(bc <<<"print $nob >= $p_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $p_factor) $p_unit
+elif [[ $(bc <<<"print $nob >= $t_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $t_factor) $t_unit
+elif [[ $(bc <<<"print $nob >= $g_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $g_factor) $g_unit
+elif [[ $(bc <<<"print $nob >= $m_factor") -eq 1 ]]; then
+    printf "%s%s\n" $(conv_size $nob $m_factor) $m_unit
+elif [[ $(bc <<<"print $nob >= $k_factor") -eq 1 ]]; then
+    printf "%s%s\n" "$(conv_size $nob $k_factor)" $k_unit
+else
+    printf "%s%s\n" $nob "B"
+fi

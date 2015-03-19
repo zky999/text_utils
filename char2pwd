@@ -1,0 +1,42 @@
+#!/usr/bin/awk -f
+BEGIN {
+	ERR_WRONT_NUMBER_OF_ARGS = 1
+	if (ARGC != 2 && ARGC != 3) {
+		printf "Usage: char2pwd <FILE> [password_char]\n" >"/dev/stderr"
+		exit ERR_WRONT_NUMBER_OF_ARGS 
+	}
+	
+	if (ARGV[2] != "") {
+		pwd_char = ARGV[2]
+		delete ARGV[2]
+		ARGC--
+	} else {
+		pwd_char = "*"
+	}
+}
+
+FNR == 1 {
+	printf "%4s: %s\n", "FILE", FILENAME
+}
+
+{
+	printf "%4d: [%-s%-3d %-s%-3d]: ", FNR, "F", NF, "C", length($0)
+	total_fields += NF
+	total_chars += length($0)
+
+	for (i=1; i<=NF; i++) {
+		for (j=1; j<=length($i); j++) {
+			printf "%s", pwd_char
+		}
+		printf "%s", OFS
+	}
+	printf "%s", ORS
+}
+
+END {
+	if (ARGC >= 2 && ARGC <= 3) {
+		printf "%17s: %d\n", "Total lines", FNR
+		printf "%17s: %d\n", "Total fields", total_fields
+		printf "%17s: %d\n", "Total characters", total_chars + FNR
+	}
+}

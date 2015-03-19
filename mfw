@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# show top 10 most frequent word in a file
+if [[ $# -ne 0 ]]; then
+    for p in "$@"; do
+	printf "%s:\n" "$p"
+	tr -cs '[:alnum:]' '[\n*]' <"$p" |tr '[:upper:]' '[:lower:]' |sort |uniq -c |sort -n |tail -n 10
+    done
+else
+    printf "%s:\n" "STDIN"
+    tr -cs '[:alnum:]' '[\n*]' |tr '[:upper:]' '[:lower:]' |sort |uniq -c |sort -n |tail -n 10
+fi

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+for ((i=1; i<=$#; i++)); do
+	eval file=\$$i
+	printf "%s\n" "$file" |awk -f ~/src/JSON.awk/JSON.awk
+done

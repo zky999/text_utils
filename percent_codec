@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+_get_index()
+{
+	local idx=-1
+	local item="$1"
+	declare -a array=("${!2}")
+	for ((i=0; i<${#array[@]}; i++)); do
+		[[ "${array[i]}" == "$(tr '[:lower:]' '[upper]' <<<"$item")" ]] && {
+			idx=$i
+			break
+		}	
+	done
+	echo "$idx"
+}
+
+_process2()
+{
+	local _action="$1"
+	local _text="$2"
+	local _final="${_text}"
+	local _temp=""
+	local _idx=-1
+	local _char=""
+
+	local _len=$(awk '{print length}' <<<"${_text}")
+	for ((i=0; i<${_len}; i++)); do
+		_char="${_text:i:1}"
+		if [[ "${_action}" == "decode" ]] && [[ "${_char}" == "%" ]]; then
+			local _value="${_text:i+1:2}"
+			if [[ -n "${_value}" ]]; then
+				_idx="$(_get_index "${_value}" "META_CHAR_VALUES[@]")"
+				[[ "${_idx}" != -1 ]] && {
+					local _char_decoded="${META_CHARS[${_idx}]}"
+					[[ -n "${_char_decoded}" ]] && {
+						_temp="$(sed "s/%${_value}/\\${_char_decoded}/" <<<"${_final}")"
+						_final="${_temp}"
+					}
+				}
+			fi
+		elif [[ "${_action}" == "encode" ]]; then
+			_idx="$(_get_index "${_char}" "META_CHARS[@]")"
+			if [[ "${_idx}" != -1 ]]; then
+				local _regex1
+				[[ "${_char}" == "^" ]] && _regex1="[\\${_char}]" || _regex1="[${_char}]"
+				local _regex2="%${META_CHAR_VALUES[${_idx}]}"
+				_temp="$(sed "s/${_regex1}/${_regex2}/" <<<"${_final}")"
+				_final="${_temp}"
+			fi
+		fi
+	done
+	printf "%s\n" "${_final}"
+}
+
+# deprecated
+_process()
+{
+	local method="$1"
+	local text="$2"
+
+	nomc=${#META_CHARS[@]}
+	nomcv=${#META_CHAR_VALUES[@]}
+
+	if [[ -n "$text" ]]; then
+		temp1="$text"
+		temp2=""
+		for ((i=0; i<$nomc; i++)); do
+			mc=${META_CHARS[i]}
+			mcv=${META_CHAR_VALUES[i]}
+
+			if [[ "$method" == "encode" ]]; then
+				exp="s/\[$mc]/\%$mcv/g"
+			elif [[ "$method" == "decode" ]]; then
+				exp="s/\%$mcv/$mc/g"
+			else
+				printf "Error: Not supprot method: %s\n" "$method" >&2
+				exit "$ERR_NOT_SUPPORT_METHOD"
+			fi
+
+			temp2="$(sed -e "$exp" <<<"$temp1")"
+			temp1="$temp2"
+		done
+		printf "%s\n" "$temp1"
+	fi
+}
+
+_choose_action()
+{
+	local option="$1"
+	[[ "$option" == "-e" ]] && ACTION=encode
+	[[ "$option" == "-d" ]] && ACTION=decode
+}
+
+_choose_case()
+{
+	local option="$1"
+	[[ "$option" == "-u" ]] && CASE=upper
+	[[ "$option" == "-l" ]] && CASE=lower
+}
+
+_print_usage()
+{
+	printf "Usage:\n"
+	local bn="$(basename "$0")"
+	printf "  %s %s\n" "$bn" "-h" >&2
+	printf "  %s %s %s %s %s\n" "$bn" "[-e|-d]" "[-u|-l]" "[--]" "[string [...]]" >&2
+	printf "\tEncoding or decoding between Percent-Encoding text and literal text.\n" >&2
+	printf "\t-h  Print this help message\n" >&2
+	printf "\t-e  encode (default)\n" >&2
+	printf "\t-d  decode\n" >&2
+	printf "\t-u  upper case output (default)\n" >&2
+	printf "\t-l  lower case output\n" >&2
+	printf "\t--  Singal of the end of options\n" >&2
+	printf "  Without any optins, this program will read text from stdin, apply default actions on them, and print out them with default format.\n" >&2
+}
+
+_test()
+{
+	count="${#META_CHARS[@]}"
+	for action in decode encode; do
+		printf "Testing for %s...\n" "$action"	
+
+		local _char
+		local _value
+
+		for ((i=0; i<"$count"; i++)); do
+			#printf "\n\n\n"
+			_char="${META_CHARS[$i]}"
+			_value="%${META_CHAR_VALUES[$i]}"
+
+			if [[ "$action" == "encode" ]]; then
+				printf "%s -> %s: " "${_char}" "${_value}"
+				local _encoded_value="$(_process2 $action "${_char}")"
+				[[ "${_encoded_value}" == "${_value}" ]] && {
+					printf "OK\n"
+				} || {
+					printf "Failed\n"
+				}
+			elif [[ "$action" == "decode" ]]; then
+				printf "%s -> %s: " "${_value}" "${_char}"
+				local _decoded_char="$(_process2 $action "${_value}")"
+				[[ "${_decoded_char}" == "${_char}" ]] && {
+					printf "OK\n"
+				} || {
+					printf "Failed\n"
+				}
+			fi
+		done
+	done
+}
+
+# Error codes
+ERR_NOT_SUPPORT_METHOD=1
+
+# Default action and output format
+ACTION=encode
+CASE=upper
+
+# Read user options
+for p in "$@"; do
+	if [[ "$p" == "-h" ]] || [[ "$p" == "--help" ]]; then
+		_print_usage
+		exit 0
+	elif [[ "$p" =~ -[ed] ]]; then
+		_choose_action "$p"
+		shift
+	elif [[ "$p" =~ -[ul] ]]; then
+		_choose_case "$p"
+		shift
+	elif [[ "$p" == "--" ]]; then
+		shift
+		break
+	fi
+done
+
+# Meta characters
+META_CHARS=(\
+' ' '!' '"' '#' '$' '%' '&' \' '(' ')' \
+'*' '+' ',' '-' '.' '/' \
+':' ';' '<' '=' '>' '?' \
+'@' \
+'[' \\ ']' '^' '_' \
+'`' \
+'{' '|' '}' '~') 
+META_CHAR_VALUES=(\
+20 21 22 23 24 25 26 27 28 29 \
+2A 2B 2C 2D 2E 2F \
+3A 3B 3C 3D 3E 3F \
+40 \
+5B 5C 5D 5E 5F \
+60 \
+7B 7C 7D 7E)
+
+#_test
+#exit
+
+# Process
+if [[ $# -eq 0 ]]; then	
+	while read line; do
+		_process2 $ACTION "$line"
+	done	
+else
+	for p in "$@"; do
+		if [[ -f "$p" ]]; then
+			while read line; do
+				_process2 $ACTION "$line"
+			done <"$p"
+		else
+			_process2 $ACTION "$p"
+		fi
+	done
+fi

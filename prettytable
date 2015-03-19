@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# 
+# prettytable -- THE SYNOPSIS OF THE SCRIPT
+# 
+# Copyright 2014 Haibo Qiu. All rights reserved.
+# 
+# Creator       : Haibo Qiu
+# Created       : 2014-11-09 22:00:14+0800
+# Last Modifier : Haibo Qiu
+# Last Modified : 2014-11-09 22:00:14+0800
+#  
+[[ -f "$1" ]] && awk -F: -f ~/bin/text_utils/prettytable.awk "$1" "$1"
