@@ -1,34 +1,45 @@
 #!/usr/bin/env bash
-if [[ $# -lt 1 ]]; then
-    printf "Usage:\t%s <file_name>\n" $(basename $0)
+# maxlinelen -- show the max line length (in char) of a file
+function calc_max_line()
+{
+	FILE="$1"
+	if [[ ! -f $FILE ]]; then
+	    printf "File \'%s\' is not a regular file or dose not exist.\n" "$FILE" >&2
+	    continue
+	fi
+	
+	TOTAL=$(wc -l "$FILE" |awk '{print $1}')
+	COUNT=0
+	MAX=0
+	PROGRESS=0
+	printf "%7s%%\t%s\r" " " "$FILE" >&2
+	while read LINE; do
+	    LEN=${#LINE};
+	    if [[ $MAX -lt $LEN ]]; then
+	        MAX=$LEN
+	    fi
+	    ((COUNT++))
+	    PROGRESS=$(echo "scale=2;100*$COUNT/$TOTAL" |bc)
+	    printf "%7s\r" $PROGRESS >&2
+	    #printf "\033[A" >&2
+	    #tput el1 >&2
+	done <"$FILE"
+	printf "\r"
+	tput el >&2
+	printf "%8s\t%s\n" "$MAX" "$FILE"
+}
+
+if [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; then
+    printf "Usage:\t%s [file [...]]\n" $(basename $0) >&2
     exit 1
 fi
 
-#FILE="$1"
-
-for FILE in "$@"; do
-    if [[ ! -f $FILE ]]; then
-	printf "File \'%s\' dose not exist.\n" "$FILE"
-	continue
-    fi
-
-    TOTAL=$(wc -l "$FILE" |awk '{print $1}')
-    COUNT=0
-    MAX=0
-    PROGRESS=0
-    printf "%7s%%\t%s\r" " " "$FILE" >&2
-    while read LINE; do
-	LEN=${#LINE};
-	if [[ $MAX -lt $LEN ]]; then
-	    MAX=$LEN
-	fi
-	((COUNT++))
-	PROGRESS=$(echo "scale=2;100*$COUNT/$TOTAL" |bc)
-	printf "%7s\r" $PROGRESS >&2
-	#printf "\033[A" >&2
-	#tput el1 >&2
-    done <"$FILE"
-    printf "\r"
-    tput el >&2
-    printf "%8s\t%s\n" "$MAX" "$FILE"
-done
+if [[ $# -eq 0 ]]; then
+	while read FILE; do
+		calc_max_line "$FILE"
+	done
+else
+	for FILE in "$@"; do
+		calc_max_line "$FILE"
+	done
+fi
