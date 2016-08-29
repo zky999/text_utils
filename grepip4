@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# grepip4 -- grep IPv4s from stdin or files
+octet_1_9="([0-9])"
+octet_10_99="([1-9][0-9])"
+octet_100_199="(1[0-9][0-9])"
+octet_200_255="(2[0-5][0-5])"
+octet="(${octet_1_9}|${octet_10_99}|${octet_100_199}|${octet_200_255})"
+ipv4="${octet}(\.${octet}){3}"
+
+if [[ $# -eq 0 ]]; then
+	# parse IP from stdin
+	while read line; do
+		# -E for extended regular expressions
+		# -o for printing matched strings only
+		grep -Eo "${ipv4}" <<<"$line"
+	done
+else
+	# parse IP from files
+	for file in "$@"; do
+		if [[ -f "$file" ]]; then
+			# -E for extended regular expressions
+			# -o for printing matched strings only
+			grep -Eo "${ipv4}" "$file"
+		else
+			printf "Error: File: $file dose not exist!\n" >&2
+			exit 1
+		fi
+	done
+fi
+
